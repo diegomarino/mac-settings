@@ -16,6 +16,7 @@ This project contains a bash script that automatically backs up various system s
   - Oh My Zsh (custom themes, plugins, and .zshrc)
   - PrusaSlicer (profiles and configurations)
 - Captures user LaunchAgents
+- Optional automatic Git backup of settings
 
 ## Usage
 
@@ -23,6 +24,7 @@ This project contains a bash script that automatically backs up various system s
 2. Make the script executable:
    ```
    chmod +x mac-settings.sh
+   chmod +x git-backup.sh
    ```
 3. Run the script manually:
    ```
@@ -58,6 +60,7 @@ parent_directory/
 │   ├── README.md
 │   ├── .gitignore
 │   ├── LICENSE
+│   ├── git-backup.sh
 │   └── mac-settings.sh
 └── mac-settings-backups/
     └── [hostname]/
@@ -82,6 +85,44 @@ You can modify the `mac-settings.sh` script to add or remove applications and se
 - `BREW_BIN`: The Homebrew binary name (useful for different Mac architectures).
 
 Adjust these variables as needed for your specific setup.
+
+## Automatic Git Backup
+
+The project includes an optional feature to automatically commit and push changes to a Git repository after each run of the main script. This allows you to keep a version-controlled backup of settings from multiple devices in a single repository.
+
+The `git-backup.sh` script uses the same configuration variables as `mac-settings.sh`, ensuring consistency between the scripts.
+
+To set up and use this feature:
+
+1. Initialize a Git repository in the `mac-settings-backups/` directory:
+   ```
+   cd ../mac-settings-backups
+   git init
+   git add .
+   git commit -m "Initial commit"
+   ```
+
+2. Set up a remote repository (e.g., on GitHub) and add it to your local repository:
+   ```
+   git remote add origin https://github.com/yourusername/mac-settings-backups.git
+   git push -u origin main
+   ```
+
+3. Configure your Git credentials for the repository.
+
+4. Open `mac-settings.sh` and uncomment the following line at the end of the file:
+   ```bash
+   # ./git-backup.sh
+   ```
+
+5. Now, every time you run `mac-settings.sh`, it will automatically commit and push the changes to your Git repository, including backups from all devices.
+
+To disable the automatic Git backup, simply comment out the line again:
+```bash
+# # ./git-backup.sh
+```
+
+Note: Be cautious about pushing sensitive information to a remote repository. Review the contents of your backups and consider using a private repository or implementing additional security measures if necessary.
 
 ## Contributing
 
