@@ -1,0 +1,63 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# VS Code files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Project-specific ignores
+mac-settings-backups/
+
+# Ignore all .log files
+*.log
+
+# Ignore backup files
+*.bak
+*.swp
+*~
+
+# Ignore any compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore any compiled C++ files
+*.out
+*.o
+
+# Ignore node modules if you ever use npm
+node_modules/
+
+# Ignore any sensitive or environment-specific files
+.env
+config.json
