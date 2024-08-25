@@ -514,4 +514,11 @@ EOF
 }
 
 # Main execution
-gather_system_info
+# Only run if the script is executed directly, not sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    gather_system_info
+
+    # Optional: Commit and push changes to Git repository
+    # Uncomment the following line to enable automatic Git backup
+    # ./git-backup.sh
+fi
