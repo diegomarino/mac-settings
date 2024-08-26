@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 #  Set logging
 LOG_FILE="/tmp/mac-settings-git-backup.log"
 
@@ -16,6 +17,9 @@ log "Starting git backup -- $HOSTNAME"
 # Change to the base backup directory
 cd "$BASE_OUTPUT_DIR" || { log "Error: Couldn't change to $BASE_OUTPUT_DIR"; exit 1; }
 
+# Fetch the latest changes from the remote
+git fetch origin || { log "Error: git FETCH failed"; exit 1; }
+
 # Check if there are local changes
 if ! git diff --quiet HEAD; then
     # There are local changes, commit them
@@ -29,16 +33,14 @@ if ! git diff --quiet HEAD; then
     }
 fi
 
-# Now try to pull
-git pull --rebase origin main || {
-    if [ $? -eq 1 ]; then
-        log "No changes to pull from remote"
-    else
-        log "Error: git PULL failed"; exit 1
-    fi
+# Rebase local changes on top of the remote changes
+git rebase origin/main || {
+    log "Error: git REBASE failed"
+    git rebase --abort
+    exit 1
 }
 
-# Finally, push changes
+# Push changes to remote
 git push origin main || {
     if [ $? -eq 1 ]; then
         log "No changes to push to remote"
