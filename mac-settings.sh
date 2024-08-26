@@ -341,7 +341,7 @@ generate_replication_script() {
         echo "mkdir -p \"$OUTPUT_DIR/Alfred\"" >>"$output_file"
         echo "$alfred_settings" | while read setting; do
             if [ -f "$setting" ]; then
-                rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
+                rel_path=$(get_relative_path "$alfred_prefs_dir" "$setting")
                 echo "mkdir -p \"$OUTPUT_DIR/Alfred/$(dirname "$rel_path")\"" >>"$output_file"
                 echo "cp \"$setting\" \"$OUTPUT_DIR/Alfred/$rel_path\"" >>"$output_file"
             fi
@@ -416,7 +416,7 @@ generate_replication_script() {
         mkdir -p "$OUTPUT_DIR/Alfred"
         echo "$alfred_settings" | while read setting; do
             if [ -f "$setting" ]; then
-                rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
+                rel_path=$(get_relative_path "$alfred_prefs_dir" "$setting")
                 mkdir -p "$OUTPUT_DIR/Alfred/$(dirname "$rel_path")"
                 cp "$setting" "$OUTPUT_DIR/Alfred/$rel_path"
             fi
@@ -430,7 +430,7 @@ generate_replication_script() {
                 workflow_name=$(basename "$workflow")
                 cp -R "$workflow" "$OUTPUT_DIR/Alfred/workflows/$workflow_name"
             fi
-        done
+            done
     fi
 
     # Create .gitignore file
@@ -447,7 +447,7 @@ copy_settings() {
     if [ "$settings" != "$app_name not installed or settings not found" ] && [ "$settings" != "No user LaunchAgents found" ]; then
         echo "mkdir -p \"$OUTPUT_DIR/$app_name\"" >>"$output_file"
         echo "$settings" | while read setting; do
-            rel_path=$(realpath --relative-to="$source_dir" "$setting")
+            rel_path=$(get_relative_path "$source_dir" "$setting")
             echo "mkdir -p \"$OUTPUT_DIR/$app_name/$(dirname "$rel_path")\"" >>"$output_file"
             echo "cp \"$setting\" \"$OUTPUT_DIR/$app_name/$rel_path\"" >>"$output_file"
         done
@@ -455,7 +455,7 @@ copy_settings() {
         # Actually copy the files
         mkdir -p "$OUTPUT_DIR/$app_name"
         echo "$settings" | while read setting; do
-            rel_path=$(realpath --relative-to="$source_dir" "$setting")
+            rel_path=$(get_relative_path "$source_dir" "$setting")
             mkdir -p "$OUTPUT_DIR/$app_name/$(dirname "$rel_path")"
             cp "$setting" "$OUTPUT_DIR/$app_name/$rel_path"
         done
@@ -523,6 +523,28 @@ Temporary Items
 EOF
 
     echo "Created .gitignore file: $gitignore_file"
+}
+
+# Function to get relative path (replacement for realpath --relative-to)
+get_relative_path() {
+    local source=$1
+    local target=$2
+
+    local common_part=$source
+    local result=""
+
+    while [[ "${target#$common_part}" == "${target}" ]]; do
+        common_part="$(dirname "$common_part")"
+        result="../$result"
+    done
+
+    if [[ $common_part == "/" ]]; then
+        result="$result${target:1}"
+    else
+        result="$result${target#$common_part/}"
+    fi
+
+    echo "$result"
 }
 
 # Main execution
