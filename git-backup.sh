@@ -33,21 +33,39 @@ if ! git diff --quiet HEAD; then
     }
 fi
 
-# Rebase local changes on top of the remote changes
-git rebase origin/main || {
-    log "Error: git REBASE failed"
-    git rebase --abort
-    exit 1
-}
-
-# Push changes to remote
-git push origin main || {
-    if [ $? -eq 1 ]; then
-        log "No changes to push to remote"
+# Check if we have any outgoing commits
+OUTGOING=$(git log origin/main..HEAD)
+if [ -n "$OUTGOING" ]; then
+    log "Outgoing commits detected. Attempting to push..."
+    
+    # Try to rebase first
+    if git rebase origin/main; then
+        log "Rebase successful. Pushing changes..."
+        if git push origin main; then
+            log "Changes pushed successfully"
+        else
+            log "Error: Failed to push after rebase. Manual intervention may be required."
+            exit 1
+        fi
     else
-        log "Error: git PUSH failed"; exit 1
+        log "Rebase failed. Attempting merge..."
+        git rebase --abort
+        if git merge origin/main; then
+            log "Merge successful. Pushing changes..."
+            if git push origin main; then
+                log "Changes pushed successfully"
+            else
+                log "Error: Failed to push after merge. Manual intervention may be required."
+                exit 1
+            fi
+        else
+            log "Error: Both rebase and merge failed. Manual intervention required."
+            exit 1
+        fi
     fi
-}
+else
+    log "No outgoing commits. Local branch is up to date."
+fi
 
 log "Git backup completed successfully"
 log "-------------------------------------------------"
