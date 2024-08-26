@@ -338,11 +338,13 @@ generate_replication_script() {
 
     echo "# Copy Alfred settings" >>"$output_file"
     if [ "$alfred_settings" != "Alfred not installed or preferences not found" ]; then
-        echo "mkdir -p \"$output_dir/Alfred\"" >>"$output_file"
+        echo "mkdir -p \"$OUTPUT_DIR/Alfred\"" >>"$output_file"
         echo "$alfred_settings" | while read setting; do
-            rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
-            echo "mkdir -p \"$output_dir/Alfred/$(dirname "$rel_path")\"" >>"$output_file"
-            echo "cp \"$setting\" \"$output_dir/Alfred/$rel_path\"" >>"$output_file"
+            if [ -f "$setting" ]; then
+                rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
+                echo "mkdir -p \"$OUTPUT_DIR/Alfred/$(dirname "$rel_path")\"" >>"$output_file"
+                echo "cp \"$setting\" \"$OUTPUT_DIR/Alfred/$rel_path\"" >>"$output_file"
+            fi
         done
     else
         echo "# $alfred_settings" >>"$output_file"
@@ -352,8 +354,10 @@ generate_replication_script() {
     echo "# Copy Alfred workflows" >>"$output_file"
     if [ "$alfred_workflows" != "Alfred not installed or workflows not found" ]; then
         echo "$alfred_workflows" | while read workflow; do
-            workflow_name=$(basename "$workflow")
-            echo "cp -R \"$workflow\" \"$output_dir/Alfred/workflows/$workflow_name\"" >>"$output_file"
+            if [ -d "$workflow" ]; then
+                workflow_name=$(basename "$workflow")
+                echo "cp -R \"$workflow\" \"$OUTPUT_DIR/Alfred/workflows/$workflow_name\"" >>"$output_file"
+            fi
         done
     else
         echo "# $alfred_workflows" >>"$output_file"
@@ -409,19 +413,23 @@ generate_replication_script() {
 
     # Copy Alfred settings and workflows
     if [ "$alfred_settings" != "Alfred not installed or preferences not found" ]; then
-        mkdir -p "$output_dir/Alfred"
+        mkdir -p "$OUTPUT_DIR/Alfred"
         echo "$alfred_settings" | while read setting; do
-            rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
-            mkdir -p "$output_dir/Alfred/$(dirname "$rel_path")"
-            cp "$setting" "$output_dir/Alfred/$rel_path"
+            if [ -f "$setting" ]; then
+                rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
+                mkdir -p "$OUTPUT_DIR/Alfred/$(dirname "$rel_path")"
+                cp "$setting" "$OUTPUT_DIR/Alfred/$rel_path"
+            fi
         done
     fi
 
     if [ "$alfred_workflows" != "Alfred not installed or workflows not found" ]; then
-        mkdir -p "$output_dir/Alfred/workflows"
+        mkdir -p "$OUTPUT_DIR/Alfred/workflows"
         echo "$alfred_workflows" | while read workflow; do
-            workflow_name=$(basename "$workflow")
-            cp -R "$workflow" "$output_dir/Alfred/workflows/$workflow_name"
+            if [ -d "$workflow" ]; then
+                workflow_name=$(basename "$workflow")
+                cp -R "$workflow" "$OUTPUT_DIR/Alfred/workflows/$workflow_name"
+            fi
         done
     fi
 
@@ -437,19 +445,19 @@ copy_settings() {
 
     echo "# Copy $app_name settings" >>"$output_file"
     if [ "$settings" != "$app_name not installed or settings not found" ] && [ "$settings" != "No user LaunchAgents found" ]; then
-        echo "mkdir -p \"$output_dir/$app_name\"" >>"$output_file"
+        echo "mkdir -p \"$OUTPUT_DIR/$app_name\"" >>"$output_file"
         echo "$settings" | while read setting; do
             rel_path=$(realpath --relative-to="$source_dir" "$setting")
-            echo "mkdir -p \"$output_dir/$app_name/$(dirname "$rel_path")\"" >>"$output_file"
-            echo "cp \"$setting\" \"$output_dir/$app_name/$rel_path\"" >>"$output_file"
+            echo "mkdir -p \"$OUTPUT_DIR/$app_name/$(dirname "$rel_path")\"" >>"$output_file"
+            echo "cp \"$setting\" \"$OUTPUT_DIR/$app_name/$rel_path\"" >>"$output_file"
         done
 
         # Actually copy the files
-        mkdir -p "$output_dir/$app_name"
+        mkdir -p "$OUTPUT_DIR/$app_name"
         echo "$settings" | while read setting; do
             rel_path=$(realpath --relative-to="$source_dir" "$setting")
-            mkdir -p "$output_dir/$app_name/$(dirname "$rel_path")"
-            cp "$setting" "$output_dir/$app_name/$rel_path"
+            mkdir -p "$OUTPUT_DIR/$app_name/$(dirname "$rel_path")"
+            cp "$setting" "$OUTPUT_DIR/$app_name/$rel_path"
         done
     else
         echo "# $settings" >>"$output_file"
