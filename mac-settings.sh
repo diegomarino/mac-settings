@@ -1,12 +1,40 @@
 #!/bin/bash
 
+# Set up PATH for cron execution
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:$PATH"
+
+# Get the directory of the script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Set the base output directory to be at the same level as the script directory
+BASE_OUTPUT_DIR="$(dirname "$SCRIPT_DIR")/mac-settings-backups"
+
+# Set logging
+LOG_FILE="/tmp/mac-settings-backup.log"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Get the hostname using different methods
+HOSTNAME=$(hostname -s 2>/dev/null || scutil --get LocalHostName 2>/dev/null || echo "unknown-host")
+log "Hostname detectado: $HOSTNAME"
+
 # User Configuration
 # ------------------
-# Modify these variables as needed
 
-# Base directory for output (sibling directory to the script's location)
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BASE_OUTPUT_DIR="$(dirname "$SCRIPT_DIR")/mac-settings-backups"
+# Homebrew binary name (change to "brew" if using Intel Mac)
+BREW_BIN="brew"
+
+# Set the output directory as a global variable
+OUTPUT_DIR="${BASE_OUTPUT_DIR}/${HOSTNAME}"
+
+# Function to create and set the output directory
+set_output_directory() {
+    # Ensure the output directory exists
+    mkdir -p "$OUTPUT_DIR"
+    log "Output directory created: $OUTPUT_DIR"
+}
 
 # List of applications to backup (add or remove as needed)
 APPS_TO_BACKUP=(
@@ -18,84 +46,60 @@ APPS_TO_BACKUP=(
     "PrusaSlicer"
 )
 
-# Homebrew binary name (change to "brew" if using Intel Mac)
-BREW_BIN="brew"
-
-# ... (rest of the script continues below)
-
-# System Info Gatherer for macOS
-# This script collects system information and generates a replication script
-
 # Function to get current timestamp
 get_timestamp() {
     date +"%Y-%m-%d_%H-%M-%S"
-}
-
-# Function to get hostname
-get_hostname() {
-    scutil --get LocalHostName
-}
-
-# Function to create and set output directory
-set_output_directory() {
-    # Get the directory where the script is located
-    script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-    
-    hostname=$(get_hostname)
-    output_dir="${BASE_OUTPUT_DIR}/${hostname}"
-    mkdir -p "$output_dir"
-    echo "$output_dir"
 }
 
 # Function to gather system information
 gather_system_info() {
     # OS Information
     os_info=$(sw_vers)
-    
+
     # Installed applications
     installed_apps=$(ls /Applications)
-    
+
     # Homebrew packages
-    if command -v $BREW_BIN &> /dev/null; then
+    if command -v $BREW_BIN &>/dev/null; then
         brew_packages=$(brew list)
     else
         brew_packages="Homebrew not installed"
     fi
-    
+
     # Mac App Store apps
-    if command -v mas &> /dev/null; then
+    if command -v mas &>/dev/null; then
         mas_apps=$(mas list)
     else
         mas_apps="mas not installed"
     fi
-    
+
     # Gather system defaults
     gather_system_defaults
-    
+
     # Gather editor extensions
     gather_editor_extensions
-    
+
     # Gather Alfred settings
     gather_alfred_settings
-    
+
     # Gather Boop settings
     gather_boop_settings
-    
+
     # Gather Hazel settings
     gather_hazel_settings
-    
+
     # Gather iTerm2 settings
     gather_iterm_settings
-    
+
     # Gather Oh My Zsh settings
     gather_ohmyzsh_settings
-    
+
     # Gather PrusaSlicer settings
     gather_prusaslicer_settings
-    
+
     # Gather LaunchAgents
     gather_launch_agents
-    
+
     # Generate the replication script
     generate_replication_script
 }
@@ -169,14 +173,14 @@ gather_editor_extensions() {
     fi
 
     # VSCode extensions
-    if command -v code &> /dev/null; then
+    if command -v code &>/dev/null; then
         vscode_extensions=$(code --list-extensions)
     else
         vscode_extensions="VSCode not installed or not in PATH"
     fi
 
     # VSCodium extensions
-    if command -v codium &> /dev/null; then
+    if command -v codium &>/dev/null; then
         vscodium_extensions=$(codium --list-extensions)
     else
         vscodium_extensions="VSCodium not installed or not in PATH"
@@ -268,141 +272,141 @@ gather_launch_agents() {
 
 # Function to generate the replication script
 generate_replication_script() {
-    mkdir -p "$BASE_OUTPUT_DIR"
-    output_dir=$(set_output_directory)
-    hostname=$(get_hostname)
-    output_file="$output_dir/${hostname}-mac-settings.sh"
-    
-    echo "#!/bin/bash" > "$output_file"
-    echo "" >> "$output_file"
-    echo "# macOS System Replication Script for $hostname" >> "$output_file"
-    echo "# Generated on: $(date)" >> "$output_file"
-    echo "" >> "$output_file"
-    
+    set_output_directory
+    output_file="$OUTPUT_DIR/${HOSTNAME}-mac-settings.sh"
+
+    log "Generando script de replicación en: $output_file"
+
+    echo "#!/bin/bash" >"$output_file"
+    echo "" >>"$output_file"
+    echo "# macOS System Replication Script for $hostname" >>"$output_file"
+
     # Add commands to replicate the system state
-    echo "# OS Information:" >> "$output_file"
-    echo "$os_info" >> "$output_file"
-    echo "" >> "$output_file"
-    
-    echo "# Install Homebrew" >> "$output_file"
-    echo '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >> "$output_file"
-    echo "" >> "$output_file"
-    
-    echo "# Install Homebrew packages" >> "$output_file"
+    echo "# OS Information:" >>"$output_file"
+    echo "$os_info" >>"$output_file"
+    echo "" >>"$output_file"
+
+    echo "# Install Homebrew" >>"$output_file"
+    echo '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >>"$output_file"
+    echo "" >>"$output_file"
+
+    echo "# Install Homebrew packages" >>"$output_file"
     echo "$brew_packages" | while read package; do
-        echo "brew install $package" >> "$output_file"
+        echo "brew install $package" >>"$output_file"
     done
-    echo "" >> "$output_file"
-    
-    echo "# Install Mac App Store apps" >> "$output_file"
+    echo "" >>"$output_file"
+
+    echo "# Install Mac App Store apps" >>"$output_file"
     echo "$mas_apps" | while read app; do
         app_id=$(echo $app | awk '{print $1}')
-        echo "mas install $app_id" >> "$output_file"
+        echo "mas install $app_id" >>"$output_file"
     done
-    echo "" >> "$output_file"
-    
-    echo "# Install editor extensions" >> "$output_file"
-    echo "" >> "$output_file"
+    echo "" >>"$output_file"
 
-    echo "# Cursor extensions" >> "$output_file"
+    echo "# Install editor extensions" >>"$output_file"
+    echo "" >>"$output_file"
+
+    echo "# Cursor extensions" >>"$output_file"
     if [ "$cursor_extensions" != "Cursor not installed or no extensions found" ]; then
         echo "$cursor_extensions" | while read ext; do
-            echo "# TODO: Install Cursor extension: $ext" >> "$output_file"
+            echo "# TODO: Install Cursor extension: $ext" >>"$output_file"
         done
     else
-        echo "# $cursor_extensions" >> "$output_file"
+        echo "# $cursor_extensions" >>"$output_file"
     fi
-    echo "" >> "$output_file"
+    echo "" >>"$output_file"
 
-    echo "# VSCode extensions" >> "$output_file"
+    echo "# VSCode extensions" >>"$output_file"
     if [ "$vscode_extensions" != "VSCode not installed or not in PATH" ]; then
         echo "$vscode_extensions" | while read ext; do
-            echo "code --install-extension $ext" >> "$output_file"
+            echo "code --install-extension $ext" >>"$output_file"
         done
     else
-        echo "# $vscode_extensions" >> "$output_file"
+        echo "# $vscode_extensions" >>"$output_file"
     fi
-    echo "" >> "$output_file"
+    echo "" >>"$output_file"
 
-    echo "# VSCodium extensions" >> "$output_file"
+    echo "# VSCodium extensions" >>"$output_file"
     if [ "$vscodium_extensions" != "VSCodium not installed or not in PATH" ]; then
         echo "$vscodium_extensions" | while read ext; do
-            echo "codium --install-extension $ext" >> "$output_file"
+            echo "codium --install-extension $ext" >>"$output_file"
         done
     else
-        echo "# $vscodium_extensions" >> "$output_file"
+        echo "# $vscodium_extensions" >>"$output_file"
     fi
-    echo "" >> "$output_file"
-    
-    echo "# Copy Alfred settings" >> "$output_file"
+    echo "" >>"$output_file"
+
+    echo "# Copy Alfred settings" >>"$output_file"
     if [ "$alfred_settings" != "Alfred not installed or preferences not found" ]; then
-        echo "mkdir -p \"$output_dir/Alfred\"" >> "$output_file"
+        echo "mkdir -p \"$output_dir/Alfred\"" >>"$output_file"
         echo "$alfred_settings" | while read setting; do
             rel_path=$(realpath --relative-to="$alfred_prefs_dir" "$setting")
-            echo "mkdir -p \"$output_dir/Alfred/$(dirname "$rel_path")\"" >> "$output_file"
-            echo "cp \"$setting\" \"$output_dir/Alfred/$rel_path\"" >> "$output_file"
+            echo "mkdir -p \"$output_dir/Alfred/$(dirname "$rel_path")\"" >>"$output_file"
+            echo "cp \"$setting\" \"$output_dir/Alfred/$rel_path\"" >>"$output_file"
         done
     else
-        echo "# $alfred_settings" >> "$output_file"
+        echo "# $alfred_settings" >>"$output_file"
     fi
-    echo "" >> "$output_file"
+    echo "" >>"$output_file"
 
-    echo "# Copy Alfred workflows" >> "$output_file"
+    echo "# Copy Alfred workflows" >>"$output_file"
     if [ "$alfred_workflows" != "Alfred not installed or workflows not found" ]; then
         echo "$alfred_workflows" | while read workflow; do
             workflow_name=$(basename "$workflow")
-            echo "cp -R \"$workflow\" \"$output_dir/Alfred/workflows/$workflow_name\"" >> "$output_file"
+            echo "cp -R \"$workflow\" \"$output_dir/Alfred/workflows/$workflow_name\"" >>"$output_file"
         done
     else
-        echo "# $alfred_workflows" >> "$output_file"
+        echo "# $alfred_workflows" >>"$output_file"
     fi
-    echo "" >> "$output_file"
-    
+    echo "" >>"$output_file"
+
     # Copy settings for each application
     for app in "${APPS_TO_BACKUP[@]}"; do
         case $app in
-            "Alfred")
-                copy_settings "$app" "$alfred_settings" "$alfred_prefs_dir"
-                ;;
-            "Boop")
-                copy_settings "$app" "$boop_settings" "$boop_dir"
-                ;;
-            "Hazel")
-                copy_settings "$app" "$hazel_settings" "$hazel_dir"
-                ;;
-            "iTerm2")
-                copy_settings "$app" "$iterm_settings" "$(dirname "$iterm_settings")"
-                ;;
-            "Oh My Zsh")
-                copy_settings "$app" "$ohmyzsh_settings" "$HOME"
-                ;;
-            "PrusaSlicer")
-                copy_settings "$app" "$prusaslicer_settings" "$prusaslicer_dir"
-                ;;
-            "LaunchAgents")
-                copy_settings "$app" "$launch_agents" "$launch_agents_dir"
-                ;;
-            *)
-                echo "Unknown application: $app"
-                ;;
+        "Alfred")
+            copy_settings "$app" "$alfred_settings" "$alfred_prefs_dir"
+            ;;
+        "Boop")
+            copy_settings "$app" "$boop_settings" "$boop_dir"
+            ;;
+        "Hazel")
+            copy_settings "$app" "$hazel_settings" "$hazel_dir"
+            ;;
+        "iTerm2")
+            copy_settings "$app" "$iterm_settings" "$(dirname "$iterm_settings")"
+            ;;
+        "Oh My Zsh")
+            copy_settings "$app" "$ohmyzsh_settings" "$HOME"
+            ;;
+        "PrusaSlicer")
+            copy_settings "$app" "$prusaslicer_settings" "$prusaslicer_dir"
+            ;;
+        "LaunchAgents")
+            copy_settings "$app" "$launch_agents" "$launch_agents_dir"
+            ;;
+        *)
+            echo "Unknown application: $app"
+            ;;
         esac
     done
-    
-    echo "# Set system preferences" >> "$output_file"
-    echo -e "$system_defaults" >> "$output_file"
-    echo "" >> "$output_file"
-    
+
+    echo "# Set system preferences" >>"$output_file"
+    echo -e "$system_defaults" >>"$output_file"
+    echo "" >>"$output_file"
+
     chmod +x "$output_file"
     echo "Replication script generated: $output_file"
-    
+
     # Generate additional files
-    echo "$installed_apps" > "$output_dir/installed_apps.txt"
-    echo "$brew_packages" > "$output_dir/brew_packages.txt"
-    echo "$mas_apps" > "$output_dir/mas_apps.txt"
-    echo "$cursor_extensions" > "$output_dir/cursor_extensions.txt"
-    echo "$vscode_extensions" > "$output_dir/vscode_extensions.txt"
-    echo "$vscodium_extensions" > "$output_dir/vscodium_extensions.txt"
-    
+    echo "$installed_apps" >"$OUTPUT_DIR/installed_apps.txt"
+    echo "$brew_packages" >"$OUTPUT_DIR/brew_packages.txt"
+    echo "$mas_apps" >"$OUTPUT_DIR/mas_apps.txt"
+    echo "$cursor_extensions" >"$OUTPUT_DIR/cursor_extensions.txt"
+    echo "$vscode_extensions" >"$OUTPUT_DIR/vscode_extensions.txt"
+    echo "$vscodium_extensions" >"$OUTPUT_DIR/vscodium_extensions.txt"
+
+    log "Additional files generated in $OUTPUT_DIR"
+
     # Copy Alfred settings and workflows
     if [ "$alfred_settings" != "Alfred not installed or preferences not found" ]; then
         mkdir -p "$output_dir/Alfred"
@@ -430,16 +434,16 @@ copy_settings() {
     app_name="$1"
     settings="$2"
     source_dir="$3"
-    
-    echo "# Copy $app_name settings" >> "$output_file"
+
+    echo "# Copy $app_name settings" >>"$output_file"
     if [ "$settings" != "$app_name not installed or settings not found" ] && [ "$settings" != "No user LaunchAgents found" ]; then
-        echo "mkdir -p \"$output_dir/$app_name\"" >> "$output_file"
+        echo "mkdir -p \"$output_dir/$app_name\"" >>"$output_file"
         echo "$settings" | while read setting; do
             rel_path=$(realpath --relative-to="$source_dir" "$setting")
-            echo "mkdir -p \"$output_dir/$app_name/$(dirname "$rel_path")\"" >> "$output_file"
-            echo "cp \"$setting\" \"$output_dir/$app_name/$rel_path\"" >> "$output_file"
+            echo "mkdir -p \"$output_dir/$app_name/$(dirname "$rel_path")\"" >>"$output_file"
+            echo "cp \"$setting\" \"$output_dir/$app_name/$rel_path\"" >>"$output_file"
         done
-        
+
         # Actually copy the files
         mkdir -p "$output_dir/$app_name"
         echo "$settings" | while read setting; do
@@ -448,9 +452,9 @@ copy_settings() {
             cp "$setting" "$output_dir/$app_name/$rel_path"
         done
     else
-        echo "# $settings" >> "$output_file"
+        echo "# $settings" >>"$output_file"
     fi
-    echo "" >> "$output_file"
+    echo "" >>"$output_file"
 }
 
 # Function to create .gitignore file
@@ -458,7 +462,7 @@ create_gitignore() {
     output_dir=$(set_output_directory)
     gitignore_file="$output_dir/../.gitignore"
 
-    cat << EOF > "$gitignore_file"
+    cat <<EOF >"$gitignore_file"
 # macOS system files
 .DS_Store
 .AppleDouble
@@ -514,11 +518,23 @@ EOF
 }
 
 # Main execution
-# Only run if the script is executed directly, not sourced
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+main() {
+    log "Iniciando backup de configuraciones de Mac para $HOSTNAME"
+    set_output_directory
     gather_system_info
+    log "Backup completado para $HOSTNAME"
 
     # Optional: Commit and push changes to Git repository
-    # Uncomment the following line to enable automatic Git backup
-    # ./git-backup.sh
+    if [[ -x "$SCRIPT_DIR/git-backup.sh" ]]; then
+        log "Ejecutando git-backup.sh"
+        "$SCRIPT_DIR/git-backup.sh"
+    else
+        log "Error: git-backup.sh no tiene permisos de ejecución o no existe"
+        log "Intenta ejecutar: chmod +x $SCRIPT_DIR/git-backup.sh"
+    fi
+}
+
+# Only run if the script is executed directly, not sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main
 fi
